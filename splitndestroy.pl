@@ -4,18 +4,29 @@ use warnings;
 use v5.10;
 
 use Fcntl qw/SEEK_SET/;
+use Getopt::Std;
+use IO::Zlib;
 
-our ($Size, $Prefix, $File, $Nsplits);
+our ($Size, $Prefix, $File, $Nsplits, %Opts);
 
 sub putsplit {
-	my ($nr, $buf) = @_;
+	my ($nr, $buf, $zipped) = @_;
 	my $outfn = sprintf($Prefix.'%0'.(length $Nsplits).'d', $nr);
-	open my $fh, '>', $outfn or die "cannot open output file $outfn: $!\n";
+	my $fh;
+	if ($zipped) {
+		$outfn .= '.gz';
+		$fh = IO::Zlib->new($outfn, 'wb9') or die "cannot open output zfile $outfn: $!\n";
+	} else {
+		open $fh, '>', $outfn or die "cannot open output file $outfn: $!\n";
+	}
 	print $fh $buf;
 	close $fh or die "could not write split $outfn: $!\n";
 }
 
-die "$0 <size_in_bytes> <prefix> <file_to_split_and_destroy>\n" unless @ARGV == 3;
+die "$0 [-z] <size_in_bytes> <prefix> <file_to_split_and_destroy>\n" unless @ARGV >= 3;
+
+
+getopts('z', \%Opts);
 
 ($Size, $Prefix, $File) = @ARGV;
 
@@ -33,7 +44,7 @@ if ($total_size % $Size) {
 for (my $i = $Nsplits-1; $i >= 0; --$i) {
 	seek $fh, $i*$Size, SEEK_SET;
 	read $fh, my($buf), $Size;
-	putsplit($i, $buf);
+	putsplit($i, $buf, defined $Opts{z});
 	truncate $fh, $i*$Size;
 }
 

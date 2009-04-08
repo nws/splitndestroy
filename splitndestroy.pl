@@ -5,7 +5,6 @@ use v5.8;
 
 use Fcntl qw/SEEK_SET/;
 use Getopt::Std;
-use IO::Zlib;
 
 use constant BUFSIZE => 8192;
 
